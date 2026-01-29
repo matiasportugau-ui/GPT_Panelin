@@ -2,12 +2,15 @@ name: Auto Merge PR
 
 on:
   pull_request:
-    types: [labeled]
+    types: [labeled, synchronize]
+  pull_request_review:
+    types: [submitted]
+  check_suite:
+    types: [completed]
+  status: {}
 
 jobs:
   auto-merge:
-    # Only run if the label is 'Auto-Merge'
-    if: github.event.label.name == 'Auto-Merge'
     runs-on: ubuntu-latest
     
     permissions:
@@ -15,32 +18,8 @@ jobs:
       pull-requests: write
     
     steps:
-      - name: Check if PR is not a draft
-        id: check-draft
-        run: |
-          PR_NUMBER=${{ github.event.pull_request.number }}
-          IS_DRAFT=${{ github.event.pull_request.draft }}
-          
-          echo "PR Number: $PR_NUMBER"
-          echo "Is Draft: $IS_DRAFT"
-          
-          if [ "$IS_DRAFT" = "true" ]; then
-            echo "PR is a draft, skipping auto-merge"
-            exit 1
-          fi
-          
-          echo "PR is not a draft, proceeding..."
-      
-      - name: Wait for checks to complete
-        uses: lewagon/wait-on-check-action@v1.3.4
-        with:
-          ref: ${{ github.event.pull_request.head.sha }}
-          repo-token: ${{ secrets.GITHUB_TOKEN }}
-          wait-interval: 10
-          running-workflow-name: 'auto-merge'
-      
-      - name: Merge Pull Request
-        uses: pascalgn/automerge-action@v0.16.3
+      - name: Auto-merge PR with Auto-Merge label
+        uses: pascalgn/automerge-action@v0.16.4
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           MERGE_LABELS: "Auto-Merge"
@@ -48,3 +27,5 @@ jobs:
           MERGE_COMMIT_MESSAGE: "pull-request-title"
           MERGE_RETRIES: 6
           MERGE_RETRY_SLEEP: 10000
+          MERGE_REQUIRED_APPROVALS: 0
+          MERGE_FILTER_AUTHOR: ""
